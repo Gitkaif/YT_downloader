@@ -5,73 +5,71 @@ import Image from "next/image";
 import ProgressBar from "./ProgressBar";
 import { Download, CheckCircle } from "./Icons";
 
-export default function HomeClient() {
+export default function ReelClient() {
   const [url, setUrl] = useState("");
   const [error, setError] = useState("");
   const [loadingInfo, setLoadingInfo] = useState(false);
   const [info, setInfo] = useState(null);
-  const [selectedFormat, setSelectedFormat] = useState(null);
-  const [selectedType, setSelectedType] = useState("mp4");
   const [downloading, setDownloading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [bytesReceived, setBytesReceived] = useState(0);
   const [bytesTotal, setBytesTotal] = useState(0);
   const controllerRef = useRef(null);
 
+  useEffect(() => () => { if (controllerRef.current) controllerRef.current.abort(); }, []);
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get('url');
-    if (q) setUrl(q);
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const q = params.get('url');
+      if (q) setUrl(q);
+    } catch {}
   }, []);
 
-  const isValidUrl = (val) => {
+  function isValidUrl(val) {
     try {
       const u = new URL(val);
+      // Placeholder: accept instagram.com, facebook.com, or any reel provider we later support
       return (
-        u.hostname.includes("youtube.com") || u.hostname === "youtu.be"
+        u.hostname.includes("instagram.com") ||
+        u.hostname.includes("facebook.com") ||
+        u.hostname.includes("reels")
       );
     } catch {
       return false;
     }
-  };
+  }
 
   async function fetchInfo() {
     setError("");
     setInfo(null);
-    setSelectedFormat(null);
     if (!isValidUrl(url)) {
-      setError("Please enter a valid YouTube URL.");
+      setError("Please enter a valid Reel URL (e.g., Instagram).");
       return;
     }
     setLoadingInfo(true);
     try {
-      const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
+      const res = await fetch(`/api/reels/info?url=${encodeURIComponent(url)}`);
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch info");
+      // If the API returns a placeholder 501 with a note, surface it in the UI instead of erroring.
+      if (res.status === 501 && data?.note) {
+        setInfo(data);
+        setError("");
+        return; 
+      }
+      if (!res.ok) throw new Error(data?.error || "Failed to fetch reel info");
       setInfo(data);
-      const candidate = data.formats.find((f) => f.container === "mp4" && f.hasVideo && f.hasAudio && f.qualityLabel) || data.formats.find((f) => f.hasAudio && f.hasVideo) || data.formats[0];
-      setSelectedFormat(candidate || null);
-      const u = new URL(window.location.href);
-      u.searchParams.set('url', url);
-      history.replaceState(null, '', u);
+      // reflect URL in address bar
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.set('url', url);
+        history.replaceState(null, '', u);
+      } catch {}
     } catch (e) {
-      setError(e.message);
+      setError(e.message || "Failed to fetch reel info");
     } finally {
       setLoadingInfo(false);
     }
   }
-
-  const thumbUrl = info?.thumbnail || null;
-  const duration = useMemo(() => {
-    if (!info?.durationSeconds) return null;
-    const s = Number(info.durationSeconds);
-    const h = Math.floor(s / 3600);
-    const m = Math.floor((s % 3600) / 60);
-    const sec = s % 60;
-    return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}` : `${m}:${sec.toString().padStart(2, "0")}`;
-  }, [info]);
-
-  useEffect(() => () => { if (controllerRef.current) controllerRef.current.abort(); }, []);
 
   function formatBytes(bytes) {
     if (!bytes || isNaN(bytes)) return "0 B";
@@ -81,7 +79,7 @@ export default function HomeClient() {
     return `${value.toFixed(value >= 100 || i === 0 ? 0 : value >= 10 ? 1 : 2)} ${units[i]}`;
   }
 
-  async function handleDownload() {
+  async function startDownload() {
     if (!info || !url) return;
     setError("");
     setProgress(0);
@@ -91,42 +89,34 @@ export default function HomeClient() {
     const ctrl = new AbortController();
     controllerRef.current = ctrl;
     try {
-      // Capture current URL before clearing input
+      // capture and then clear the input and URL param
       const currentUrl = url;
-      const qs = new URLSearchParams({ url: currentUrl, format: selectedType });
-      if (selectedFormat?.itag && selectedType === 'mp4') qs.set('itag', String(selectedFormat.itag));
-      // Clear input and URL param immediately after click
       setUrl("");
       try {
         const u = new URL(window.location.href);
         u.searchParams.delete('url');
         history.replaceState(null, '', u);
       } catch {}
-      const res = await fetch(`/api/download?${qs.toString()}`, { signal: ctrl.signal, cache: 'no-store' });
+
+      const res = await fetch(`/api/reels/download?url=${encodeURIComponent(currentUrl)}`, { signal: ctrl.signal, cache: 'no-store' });
       if (!res.ok) {
-        if (res.status === 499) {
-          throw new Error('Connection interrupted. Please retry.');
-        }
         const contentType = res.headers.get('content-type') || '';
         if (contentType.includes('application/json')) {
           const data = await res.json().catch(() => ({}));
-          throw new Error(data.error || `Download failed (HTTP ${res.status})`);
+          throw new Error(data?.error || `Download failed (HTTP ${res.status})`);
         }
         throw new Error(`Download failed (HTTP ${res.status})`);
       }
+
       const reader = res.body?.getReader();
       const contentDisposition = res.headers.get('content-disposition') || '';
       const match = contentDisposition.match(/filename="?([^";]+)"?/i);
-      const filename = match ? match[1] : `video.${selectedType}`;
+      const filename = match ? match[1] : info?.suggestedFilename || 'reel.mp4';
 
       const chunks = [];
       let received = 0;
-      const headerLength = Number(res.headers.get('content-length') || 0);
-      let total = headerLength;
-      if (!total && selectedType === 'mp4') {
-        const formatHint = Number(selectedFormat?.contentLength || 0);
-        if (formatHint) total = formatHint;
-      }
+      const totalHeader = Number(res.headers.get('content-length') || 0);
+      let total = totalHeader;
       setBytesTotal(total);
 
       while (true) {
@@ -138,7 +128,7 @@ export default function HomeClient() {
         if (total) setProgress(Math.round((received / total) * 100));
       }
       if (total) setProgress(100);
-      const blob = new Blob(chunks, { type: selectedType === 'mp3' ? 'audio/mpeg' : 'video/mp4' });
+      const blob = new Blob(chunks, { type: 'video/mp4' });
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
       link.download = filename;
@@ -147,22 +137,19 @@ export default function HomeClient() {
       link.remove();
       URL.revokeObjectURL(link.href);
     } catch (e) {
-      if (e.name !== 'AbortError') setError(e.message);
+      if (e.name !== 'AbortError') setError(e.message || 'Download failed');
     } finally {
       setDownloading(false);
     }
   }
 
-  const videoFormats = useMemo(() => {
-    const seen = new Set();
-    const unique = [];
-    for (const f of info?.formats || []) {
-      if (f && f.hasVideo && f.container === 'mp4' && !seen.has(f.itag)) {
-        seen.add(f.itag);
-        unique.push(f);
-      }
-    }
-    return unique;
+  const duration = useMemo(() => {
+    if (!info?.durationSeconds) return null;
+    const s = Number(info.durationSeconds);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}` : `${m}:${sec.toString().padStart(2, "0")}`;
   }, [info]);
 
   return (
@@ -171,9 +158,9 @@ export default function HomeClient() {
         <section className="hero">
           <div className="hero-title">
             <Download />
-            <span>YouTube video Downloader</span>
+            <span>Instagram Reels Downloader</span>
           </div>
-          <div className="hero-tagline">Paste a YouTube link and download your video easily.</div>
+          <div className="hero-tagline">Paste a public Instagram Reel link and download your video easily.</div>
         </section>
 
         <section className="card stack">
@@ -181,11 +168,11 @@ export default function HomeClient() {
           <div className="stack">
             <input
               className="input"
-              placeholder="https://youtube.com/watch?v=abc123"
+              placeholder="https://www.instagram.com/reel/abc..."
               value={url}
               onChange={(e) => setUrl(e.target.value.trim())}
               onKeyDown={(e) => { if (e.key === 'Enter') fetchInfo(); }}
-              aria-label="YouTube URL"
+              aria-label="Instagram Reel URL"
             />
             <div className="row" style={{ justifyContent: 'flex-end' }}>
               <button className="button" onClick={fetchInfo} disabled={loadingInfo}>
@@ -194,10 +181,8 @@ export default function HomeClient() {
               </button>
             </div>
           </div>
-          {error ? <div className="error" role="alert">{error}</div> : <div className="helper">Supports standard youtube.com and youtu.be links.</div>}
+          {error ? <div className="error" role="alert">{error}</div> : <div className="helper">Supports public instagram.com reels.</div>}
         </section>
-
-       
 
         {loadingInfo && (
           <section className="card">
@@ -216,44 +201,14 @@ export default function HomeClient() {
                 )}
               </div>
               <div className="meta">
-                <div className="title">{info.title}</div>
-                <div className="muted">{info.author}</div>
+                <div className="title">{info.title || 'Instagram Reel'}</div>
+                <div className="muted">{info.author || ''}</div>
                 {duration && <div className="muted">Duration: {duration}</div>}
               </div>
             </div>
 
             <div className="row">
-              <label>
-                <div className="helper">Type</div>
-                <select className="select" value={selectedType} onChange={(e) => setSelectedType(e.target.value)}>
-                  <option value="mp4">MP4 (video)</option>
-                  <option value="mp3">MP3 (audio)</option>
-                </select>
-              </label>
-
-              {selectedType === 'mp4' && (
-                <label>
-                  <div className="helper">Quality</div>
-                  <select
-                    className="select"
-                    value={selectedFormat?.itag || ''}
-                    onChange={(e) => {
-                      const itag = Number(e.target.value);
-                      setSelectedFormat(videoFormats.find((f) => f.itag === itag) || null);
-                    }}
-                  >
-                    {videoFormats.map((f) => (
-                      <option key={f.itag} value={f.itag}>
-                        {f.qualityLabel || 'Unknown'} · {f.container.toUpperCase()} {f.hasAudio ? '+ audio' : ''}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
-            </div>
-
-            <div className="row">
-              <button className="button" onClick={handleDownload} disabled={downloading}>
+              <button className="button" onClick={startDownload} disabled={downloading}>
                 <Download />
                 {downloading ? 'Downloading…' : 'Download'}
               </button>
@@ -268,13 +223,17 @@ export default function HomeClient() {
                 </div>
               )}
             </div>
+
+            {info.note ? (
+              <div className="helper">{info.note}</div>
+            ) : null}
           </section>
         )}
 
 <section className="card stack">
           <div className="section-title">Why choose this?</div>
           <ul className="features">
-            <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Supports standard youtube.com and youtu.be links.</li>
+            <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Supports standard instagram.com and reels links.</li>
             <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Fast and easy to use.</li>
             <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Works on desktop and mobile.</li>
           </ul>
@@ -287,21 +246,21 @@ export default function HomeClient() {
               <div className="step-index">1</div>
               <div>
                 <div className="step-title">Paste your link</div>
-                <div className="step-desc">Copy a YouTube video URL and paste it into the field above.</div>
+                <div className="step-desc">Copy a public Instagram Reel URL and paste it above.</div>
               </div>
             </div>
             <div className="step">
               <div className="step-index">2</div>
               <div>
-                <div className="step-title">Choose format and quality</div>
-                <div className="step-desc">Pick MP4 or MP3, and select your preferred video quality.</div>
+                <div className="step-title">Fetch and preview</div>
+                <div className="step-desc">We resolve the direct media URL for the reel.</div>
               </div>
             </div>
             <div className="step">
               <div className="step-index">3</div>
               <div>
                 <div className="step-title">Download instantly</div>
-                <div className="step-desc">Click Download and we’ll prepare your file with a clean filename.</div>
+                <div className="step-desc">Click Download and track progress in real-time.</div>
               </div>
             </div>
           </div>
@@ -316,5 +275,3 @@ export default function HomeClient() {
     </div>
   );
 }
-
-
