@@ -58,6 +58,7 @@ export default function RootLayout({ children }) {
                 <nav className="row" style={{ gap: 16 }}>
                   <Link href="/" style={{ color: '#fff', textDecoration: 'none', opacity: 0.95 }}>YouTube</Link>
                   <Link href="/reels" style={{ color: '#fff', textDecoration: 'none', opacity: 0.95 }}>Reels</Link>
+                  <Link href="/facebook" style={{ color: '#fff', textDecoration: 'none', opacity: 0.95 }}>Facebook</Link>
                 </nav>
               </div>
               <div style={{ filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' }}>
