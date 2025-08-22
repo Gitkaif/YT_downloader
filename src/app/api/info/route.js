@@ -1,3 +1,5 @@
+// This route should not be statically exported as it handles dynamic requests
+export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
@@ -58,5 +60,6 @@ export async function GET(request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
 
 

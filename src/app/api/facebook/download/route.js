@@ -1,10 +1,8 @@
+// This route should not be statically exported as it handles dynamic requests
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
-import { FacebookScraper } from 'fb-downloader-scraper';
-import { PassThrough } from 'stream';
-import { promisify } from 'util';
+import fbDownloader from 'fb-downloader';
 import sanitize from 'sanitize-filename';
-
-const pipeline = promisify(require('stream').pipeline);
 
 function contentDispositionFor(filenameBase, extension) {
   const base = sanitize(filenameBase || 'video').replace(/[\r\n]/g, ' ').trim() || 'video';
@@ -38,28 +36,25 @@ export async function GET(request) {
   }
 
   try {
-    // Initialize the scraper
-    const scraper = new FacebookScraper();
-    
-    // Get video info using fb-downloader-scraper
-    const info = await scraper.getVideoInfo(url).catch(err => {
-      console.error('Error getting video info:', err);
-      throw new Error('Failed to fetch video information. The video may be private or the URL may be invalid.');
-    });
+    // Get video info using fb-downloader
+    const info = await fbDownloader(url);
 
-    if (!info || !info.streams || info.streams.length === 0) {
+    if (!info || !info.download || info.download.length === 0) {
       throw new Error('No playable formats found for this video');
     }
 
     // Get the requested format or the best one by default
     let selectedFormat;
     if (itag) {
-      selectedFormat = info.streams[parseInt(itag.replace('fb_', ''))];
+      const index = parseInt(itag.replace('fb_', ''));
+      if (index >= 0 && index < info.download.length) {
+        selectedFormat = info.download[index];
+      }
     }
     
-    // If no specific format requested or not found, get the first one
-    if (!selectedFormat) {
-      selectedFormat = info.streams[0];
+    // If no specific format requested or not found, get the first one (highest quality)
+    if (!selectedFormat && info.download.length > 0) {
+      selectedFormat = info.download[0];
     }
 
     if (!selectedFormat || !selectedFormat.url) {
@@ -85,33 +80,11 @@ export async function GET(request) {
       throw new Error(`Failed to fetch video: ${videoResponse.status} ${videoResponse.statusText}`);
     }
 
-    // Create a pass-through stream
-    const stream = new PassThrough();
-    
-    // Start streaming the response
-    (async () => {
-      try {
-        if (videoResponse.body) {
-          for await (const chunk of videoResponse.body) {
-            if (signal.aborted) break;
-            stream.write(chunk);
-          }
-          stream.end();
-        }
-      } catch (err) {
-        if (err.name !== 'AbortError') {
-          console.error('Stream error:', err);
-          stream.destroy(err);
-        }
-      }
-    })();
-
     // Return the streamed response
-    return new Response(stream, {
+    return new Response(videoResponse.body, {
       headers: {
         'Content-Type': 'video/mp4',
         'Content-Disposition': contentDispositionFor(cleanTitle, 'mp4'),
-        'Content-Length': selectedFormat.contentLength ? selectedFormat.contentLength.toString() : '',
         'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
         'Pragma': 'no-cache',
         'Expires': '0',
@@ -123,3 +96,4 @@ export async function GET(request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+

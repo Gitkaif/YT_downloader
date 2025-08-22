@@ -1,3 +1,6 @@
+// This route should not be statically exported as it handles dynamic downloads
+export const dynamic = 'force-dynamic';
+
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
