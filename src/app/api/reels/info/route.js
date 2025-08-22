@@ -6,6 +6,12 @@ import { NextResponse } from 'next/server';
 import { instagramGetUrl } from 'instagram-url-direct';
 import sanitize from 'sanitize-filename';
 
+// Set response headers
+const headers = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store, max-age=0',
+};
+
 function isReelUrl(u) {
   try {
     const url = new URL(u);
@@ -24,7 +30,10 @@ export async function GET(request) {
   const url = searchParams.get('url');
 
   if (!url || !isReelUrl(url)) {
-    return NextResponse.json({ error: 'Invalid Reel URL.' }, { status: 400 });
+    return new NextResponse(
+      JSON.stringify({ error: 'Invalid Reel URL. Please provide a valid Instagram Reel URL.' }), 
+      { status: 400, headers }
+    );
   }
   try {
     const data = await instagramGetUrl(url);
@@ -40,17 +49,27 @@ export async function GET(request) {
     const suggestedBase = sanitize(ownerUser || ownerName || 'reel') || 'reel';
     const suggestedFilename = `${suggestedBase}.mp4`;
 
-    return NextResponse.json({
-      platform: 'instagram',
-      title,
-      author: ownerName || ownerUser || null,
-      durationSeconds: null,
-      thumbnail: thumb,
-      directUrl: video?.url || null,
-      suggestedFilename,
-    });
-  } catch (e) {
-    return NextResponse.json({ error: 'Failed to fetch reel info', detail: String(e?.message || e) }, { status: 500 });
+    return new NextResponse(
+      JSON.stringify({
+        success: true,
+        platform: 'instagram',
+        title,
+        author: ownerName || ownerUser || null,
+        durationSeconds: null,
+        thumbnail: thumb,
+        directUrl: video?.url || null,
+        suggestedFilename,
+      }),
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error('Error fetching reel info:', error);
+    return new NextResponse(
+      JSON.stringify({ 
+        success: false,
+        error: 'Failed to fetch reel information. Please try again.' 
+      }),
+      { status: 500, headers }
+    );
   }
 }
-

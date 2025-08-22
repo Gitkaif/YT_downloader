@@ -2,30 +2,90 @@
 const nextConfig = {
   // Enable server-side features including API routes
   trailingSlash: true,
+  
+  // Configure images
   images: {
+    domains: [
+      'i.ytimg.com',
+      'img.youtube.com',
+      'yt3.ggpht.com',
+      '*.fbcdn.net',
+      '*.cdninstagram.com',
+      '*.instagram.com',
+      '*.youtube.com'
+    ],
     remotePatterns: [
       { protocol: 'https', hostname: 'i.ytimg.com' },
       { protocol: 'https', hostname: 'img.youtube.com' },
       { protocol: 'https', hostname: 'yt3.ggpht.com' },
-      // Instagram/Facebook CDNs for reel thumbnails
       { protocol: 'https', hostname: '**.fbcdn.net' },
       { protocol: 'https', hostname: '**.cdninstagram.com' },
+      { protocol: 'https', hostname: '*.instagram.com' },
     ],
   },
-  // Ensure native/binary deps resolve from node_modules at runtime
-  serverExternalPackages: ['fluent-ffmpeg', 'ffmpeg-static', '@distube/ytdl-core'],
+  
+  // Server components external packages
+  serverExternalPackages: [
+    'fluent-ffmpeg',
+    'ffmpeg-static',
+    '@distube/ytdl-core',
+    'instagram-url-direct',
+    'sanitize-filename'
+  ],
   
   // Webpack configuration
-  webpack: (config, { isServer }) => {
+  webpack: (config, { isServer, dev }) => {
+    // Fixes npm packages that depend on node modules
     if (!isServer) {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
         path: false,
         os: false,
+        child_process: false,
+        net: false,
+        tls: false,
+        dns: false
       };
     }
+    
+    // Add custom webpack configurations here
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      // Add any necessary aliases here
+    };
+    
     return config;
+  },
+  
+  // Enable React strict mode
+  reactStrictMode: true,
+  
+  // Configure CORS for API routes
+  async headers() {
+    return [
+      {
+        source: '/api/:path*',
+        headers: [
+          { key: 'Access-Control-Allow-Credentials', value: 'true' },
+          { key: 'Access-Control-Allow-Origin', value: '*' },
+          { key: 'Access-Control-Allow-Methods', value: 'GET,OPTIONS,PATCH,DELETE,POST,PUT' },
+          { key: 'Access-Control-Allow-Headers', value: 'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version' },
+        ],
+      },
+    ];
+  },
+  
+  // Configure redirects if needed
+  async redirects() {
+    return [
+      // Add any redirects here
+    ];
+  },
+  
+  // Environment variables
+  env: {
+    // Add any environment variables here
   },
 };
 
