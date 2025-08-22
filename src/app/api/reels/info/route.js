@@ -1,16 +1,10 @@
-// This route should not be statically exported as it handles dynamic requests
+// src/app/api/reels/info/route.js
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
 import { NextResponse } from 'next/server';
 import { instagramGetUrl } from 'instagram-url-direct';
 import sanitize from 'sanitize-filename';
-
-// Set response headers
-const headers = {
-  'Content-Type': 'application/json',
-  'Cache-Control': 'no-store, max-age=0',
-};
 
 function isReelUrl(u) {
   try {
@@ -30,16 +24,15 @@ export async function GET(request) {
   const url = searchParams.get('url');
 
   if (!url || !isReelUrl(url)) {
-    return new NextResponse(
-      JSON.stringify({ error: 'Invalid Reel URL. Please provide a valid Instagram Reel URL.' }), 
-      { status: 400, headers }
+    return NextResponse.json(
+      { success: false, error: 'Invalid Reel URL. Please provide a valid Instagram Reel URL.' },
+      { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
   try {
     const data = await instagramGetUrl(url);
-    // data: { results_number, post_info, url_list, media_details: [{type, url, thumbnail, dimensions, video_view_count}] }
     const media = Array.isArray(data?.media_details) ? data.media_details : [];
-    // Prefer a video entry if present (Reels)
     const video = media.find((m) => m?.type === 'video') || media[0] || null;
 
     const ownerUser = data?.post_info?.owner_username || null;
@@ -49,27 +42,26 @@ export async function GET(request) {
     const suggestedBase = sanitize(ownerUser || ownerName || 'reel') || 'reel';
     const suggestedFilename = `${suggestedBase}.mp4`;
 
-    return new NextResponse(
-      JSON.stringify({
-        success: true,
-        platform: 'instagram',
-        title,
-        author: ownerName || ownerUser || null,
-        durationSeconds: null,
-        thumbnail: thumb,
-        directUrl: video?.url || null,
-        suggestedFilename,
-      }),
-      { status: 200 }
-    );
+    return NextResponse.json({
+      success: true,
+      platform: 'instagram',
+      title,
+      author: ownerName || ownerUser || null,
+      durationSeconds: null,
+      thumbnail: thumb,
+      directUrl: video?.url || null,
+      suggestedFilename,
+    }, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store, max-age=0',
+      }
+    });
   } catch (error) {
-    console.error('Error fetching reel info:', error);
-    return new NextResponse(
-      JSON.stringify({ 
-        success: false,
-        error: 'Failed to fetch reel information. Please try again.' 
-      }),
-      { status: 500, headers }
+    console.error('Error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch reel information' },
+      { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
 }
