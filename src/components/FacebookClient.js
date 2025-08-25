@@ -310,7 +310,50 @@ export default function FacebookClient() {
               </div>
             </div>
           </section>
+          
         )}
+
+        <section className="card stack">
+          <div className="section-title">Why choose this?</div>
+          <ul className="features">
+            <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Supports facebook.com and fb.watch video links.</li>
+            <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Fast and easy to use.</li>
+            <li style={{ display: 'flex', alignItems: 'center' }}><CheckCircle style={{ marginRight: 6 }} /> Works on desktop and mobile.</li>
+          </ul>
+        </section>
+
+        <section className="card stack">
+          <div className="section-title">How it works</div>
+          <div className="steps">
+            <div className="step">
+              <div className="step-index">1</div>
+              <div>
+                <div className="step-title">Paste your link</div>
+                <div className="step-desc">Copy a Facebook video URL and paste it into the field above.</div>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-index">2</div>
+              <div>
+                <div className="step-title">Choose quality</div>
+                <div className="step-desc">Select your preferred video quality from the available options.</div>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-index">3</div>
+              <div>
+                <div className="step-title">Download instantly</div>
+                <div className="step-desc">Click Download and we'll prepare your video with a clean filename.</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <footer className="footer">
+          © <span suppressHydrationWarning>{new Date().getFullYear()}</span> — No ads. For personal use only.
+          <br />
+          <a href="https://kaifsportfoliosite.web.app/" target="_blank" rel="noopener noreferrer">Click here to visit my portfolio</a>
+        </footer>
       </div>
       
       <style jsx>{`
