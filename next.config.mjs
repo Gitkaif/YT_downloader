@@ -1,7 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Enable server-side features including API routes
-  trailingSlash: true,
+  // API routes can 404 on Vercel when a trailing slash is present ("/api/info/")
+  // Disable global trailing slashes so API endpoints remain at "/api/..." without a slash
+  trailingSlash: false,
   
   // Configure images
   images: {
