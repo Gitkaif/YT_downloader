@@ -1,6 +1,5 @@
 import "./globals.css";
-import Link from "next/link";
-import ThemeToggle from "../components/ThemeToggle";
+import Navbar from "../components/Navbar";
 
 export const metadata = {
   metadataBase: new URL("https://example.com"),
@@ -41,32 +40,7 @@ export default function RootLayout({ children }) {
         <script dangerouslySetInnerHTML={{ __html: themeInitializer }} />
       </head>
       <body suppressHydrationWarning>
-        <header
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 50,
-            background: 'linear-gradient(90deg, #1d4ed8 100%)',
-            color: '#fff',
-            boxShadow: '0 1px 0 rgba(255,255,255,0.1), 0 2px 8px rgba(0,0,0,0.12)'
-          }}
-        >
-          <div style={{ maxWidth: 980, margin: '0 auto', padding: '16px 12px' }}>
-            <div className="row" style={{ justifyContent: 'space-between', alignItems: 'center' }}>
-              <div className="row" style={{ gap: 16, alignItems: 'center' }}>
-                <Link href="/" className="brand" style={{ fontSize: 24, textDecoration: 'none', color: '#fff' }}>VidSaverPro</Link>
-                <nav className="row" style={{ gap: 16 }}>
-                  <Link href="/" style={{ color: '#fff', textDecoration: 'none', opacity: 0.95 }}>YouTube</Link>
-                  <Link href="/reels" style={{ color: '#fff', textDecoration: 'none', opacity: 0.95 }}>Reels</Link>
-                  <Link href="/facebook" style={{ color: '#fff', textDecoration: 'none', opacity: 0.95 }}>Facebook</Link>
-                </nav>
-              </div>
-              <div style={{ filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' }}>
-                <ThemeToggle />
-              </div>
-            </div>
-          </div>
-        </header>
+        <Navbar />
         <main className="container" style={{ padding: '1rem' }}>
           {children}
         </main>
