@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import ProgressBar from "./ProgressBar";
 import { Download, CheckCircle } from "./Icons";
+import { safeFetch } from "../utils/safeFetch";
 
 export default function ReelClient() {
   const [url, setUrl] = useState("");
@@ -48,15 +49,13 @@ export default function ReelClient() {
     }
     setLoadingInfo(true);
     try {
-      const res = await fetch(`/api/reels/info?url=${encodeURIComponent(url)}`);
-      const data = await res.json();
+      const data = await safeFetch(`/api/reels/info?url=${encodeURIComponent(url)}`);
       // If the API returns a placeholder 501 with a note, surface it in the UI instead of erroring.
-      if (res.status === 501 && data?.note) {
+      if (data?.note) {
         setInfo(data);
         setError("");
         return; 
       }
-      if (!res.ok) throw new Error(data?.error || "Failed to fetch reel info");
       setInfo(data);
       // reflect URL in address bar
       try {
@@ -269,7 +268,24 @@ export default function ReelClient() {
         <footer className="footer">
           © <span suppressHydrationWarning>{new Date().getFullYear()}</span> — No ads. For personal use only.
           <br />
-          <a href="https://kaifsportfoliosite.web.app/" target="_blank" rel="noopener noreferrer">Click here to visit my portfolio</a>
+          <a
+            href="https://kaifsportfoliosite.web.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontWeight: 'bold',
+              color: '#1976d2',
+              background: 'rgba(25, 118, 210, 0.08)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              textDecoration: 'underline',
+              display: 'inline-block',
+              marginTop: 4
+            }}
+          >
+            <span role="img" aria-label="star" style={{ marginRight: 4 }}>👨‍💻</span>
+            Click here to visit my portfolio
+          </a>
         </footer>
       </div>
     </div>

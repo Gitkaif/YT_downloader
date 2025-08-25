@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import ProgressBar from "./ProgressBar";
 import { Download, CheckCircle } from "./Icons";
+import { safeFetch } from "../utils/safeFetch";
 
 export default function HomeClient() {
   const [url, setUrl] = useState("");
@@ -45,9 +46,7 @@ export default function HomeClient() {
     }
     setLoadingInfo(true);
     try {
-      const res = await fetch(`/api/info?url=${encodeURIComponent(url)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch info");
+      const data = await safeFetch(`/api/info?url=${encodeURIComponent(url)}`);
       setInfo(data);
       const candidate = data.formats.find((f) => f.container === "mp4" && f.hasVideo && f.hasAudio && f.qualityLabel) || data.formats.find((f) => f.hasAudio && f.hasVideo) || data.formats[0];
       setSelectedFormat(candidate || null);

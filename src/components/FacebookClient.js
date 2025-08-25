@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import ProgressBar from "./ProgressBar";
 import { Download, CheckCircle } from "./Icons";
+import { safeFetch } from "../utils/safeFetch";
 
 export default function FacebookClient() {
   const [url, setUrl] = useState("");
@@ -41,9 +42,7 @@ export default function FacebookClient() {
     }
     setLoadingInfo(true);
     try {
-      const res = await fetch(`/api/facebook/info?url=${encodeURIComponent(url)}`);
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to fetch video info");
+      const data = await safeFetch(`/api/facebook/info?url=${encodeURIComponent(url)}`);
       setInfo(data);
       // Select the highest quality format by default
       const bestFormat = data.formats[0];
@@ -352,7 +351,24 @@ export default function FacebookClient() {
         <footer className="footer">
           © <span suppressHydrationWarning>{new Date().getFullYear()}</span> — No ads. For personal use only.
           <br />
-          <a href="https://kaifsportfoliosite.web.app/" target="_blank" rel="noopener noreferrer">Click here to visit my portfolio</a>
+          <a
+            href="https://kaifsportfoliosite.web.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              fontWeight: 'bold',
+              color: '#1976d2',
+              background: 'rgba(25, 118, 210, 0.08)',
+              padding: '4px 10px',
+              borderRadius: '6px',
+              textDecoration: 'underline',
+              display: 'inline-block',
+              marginTop: 4
+            }}
+          >
+            <span role="img" aria-label="star" style={{ marginRight: 4 }}>👨‍💻</span>
+            Click here to visit my portfolio
+          </a>
         </footer>
       </div>
       
