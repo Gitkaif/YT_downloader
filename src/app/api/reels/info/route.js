@@ -1,10 +1,21 @@
 // src/app/api/reels/info/route.js
 export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const runtime = 'edge'; // Changed from 'nodejs' to 'edge' for better compatibility
 
 import { NextResponse } from 'next/server';
 import { instagramGetUrl } from 'instagram-url-direct';
 import sanitize from 'sanitize-filename';
+
+// Helper function to create consistent JSON responses
+const jsonResponse = (data, status = 200) => {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store, max-age=0',
+    },
+  });
+};
 
 function isReelUrl(u) {
   try {
@@ -24,9 +35,9 @@ export async function GET(request) {
   const url = searchParams.get('url');
 
   if (!url || !isReelUrl(url)) {
-    return NextResponse.json(
+    return jsonResponse(
       { success: false, error: 'Invalid Reel URL. Please provide a valid Instagram Reel URL.' },
-      { status: 400, headers: { 'Content-Type': 'application/json' } }
+      400
     );
   }
 
@@ -42,7 +53,7 @@ export async function GET(request) {
     const suggestedBase = sanitize(ownerUser || ownerName || 'reel') || 'reel';
     const suggestedFilename = `${suggestedBase}.mp4`;
 
-    return NextResponse.json({
+    return jsonResponse({
       success: true,
       platform: 'instagram',
       title,
@@ -51,17 +62,16 @@ export async function GET(request) {
       thumbnail: thumb,
       directUrl: video?.url || null,
       suggestedFilename,
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'Cache-Control': 'no-store, max-age=0',
-      }
     });
   } catch (error) {
     console.error('Error:', error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to fetch reel information' },
-      { status: 500, headers: { 'Content-Type': 'application/json' } }
+    return jsonResponse(
+      { 
+        success: false, 
+        error: error.message || 'Failed to fetch reel information',
+        details: process.env.NODE_ENV === 'development' ? error.stack : undefined
+      },
+      500
     );
   }
 }
