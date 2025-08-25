@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "postinstall": "node -e \"try { require('ffmpeg-static'); } catch(e) { console.log('ffmpeg-static not available, skipping...'); }\""
   },
   "dependencies": {
     "@distube/ytdl-core": "^4.14.4",
