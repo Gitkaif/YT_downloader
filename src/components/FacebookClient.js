@@ -343,7 +343,7 @@ export default function FacebookClient() {
               <div className="step-index">3</div>
               <div>
                 <div className="step-title">Download instantly</div>
-                <div className="step-desc">Click Download and we'll prepare your video with a clean filename.</div>
+                <div className="step-desc">Click Download and we&apos;ll prepare your video with a clean filename.</div>
               </div>
             </div>
           </div>

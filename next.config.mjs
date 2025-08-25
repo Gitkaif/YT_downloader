@@ -35,16 +35,7 @@ const nextConfig = {
     'sanitize-filename'
   ],
 
-  // Vercel-specific configuration
-  experimental: {
-    serverComponentsExternalPackages: [
-      'fluent-ffmpeg',
-      'ffmpeg-static',
-      '@distube/ytdl-core',
-      'instagram-url-direct',
-      'sanitize-filename'
-    ]
-  },
+  // Vercel-specific configuration - moved from experimental to root level
   
   // Webpack configuration
   webpack: (config, { isServer, dev }) => {
